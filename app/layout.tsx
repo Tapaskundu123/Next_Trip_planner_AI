@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "react-hot-toast";
 
 const outfit = Outfit({
   weight: "400",
@@ -25,6 +26,7 @@ export default function RootLayout({
       >
         
         {children}
+          <Toaster position="top-right" />
       </body>
     </html>
   );
