@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
-import Header from "@/_components/Header";
 
 const outfit = Outfit({
   weight: "400",
@@ -24,7 +23,7 @@ export default function RootLayout({
       <body
         className={outfit.className}
       >
-        <Header/>
+        
         {children}
       </body>
     </html>
