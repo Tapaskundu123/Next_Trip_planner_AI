@@ -3,7 +3,7 @@
 import { SendHorizontal } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react'
 import toast from 'react-hot-toast';
-
+import rehypeRaw from "rehype-raw";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -57,12 +57,13 @@ const ChatwithAi = () => {
 
       const data = await res.json();
 
+  
       // STEP 2: Update last chat entry with AI reply
       setChatHistory(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           ...updated[updated.length - 1],
-          ai: data.reply || "No response received"
+          ai: data.reply|| "No response received"
         };
         return updated;
       });
@@ -105,6 +106,7 @@ const ChatwithAi = () => {
                 {entry.ai ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
+                     rehypePlugins={[rehypeRaw]}
                     components={{
                       code({ inline, className, children, ...props }) {
                         const match = /language-(\w+)/.exec(className || "");
