@@ -21,7 +21,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/signup']
+  matcher: ['/', '/login', '/signup','/create-new-trip']
 };
 
 // 👇 This is the key line
