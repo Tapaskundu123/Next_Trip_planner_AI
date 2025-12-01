@@ -197,13 +197,17 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
       </section>
 
       <div className="text-center py-12">
-        <button
+     { saved?
+      <button disabled={saved} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl font-bold px-16 py-6 rounded-full shadow-2xl hover:scale-105 transition transform disabled:opacity-50">Trip details Saved</button>
+     :
+      <button
           onClick={handleSaveTrip}
           disabled={saving}
           className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl font-bold px-16 py-6 rounded-full shadow-2xl hover:scale-105 transition transform disabled:opacity-50"
         >
           {saving ? "Saving..." : "Book This Trip Now!"}
         </button>
+}
       </div>
     </div>
   );
