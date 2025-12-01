@@ -1,6 +1,6 @@
 'use client'
 import React from 'react'
-import { ArrowRight, Sparkles, MapPin, Mountain } from 'lucide-react'; // Add lucide-react icons for attractiveness
+import { ArrowRight, Sparkles, MapPin, Mountain } from 'lucide-react';
 
 const ChatboxStart = ({ setInput }: { setInput: (msg: string) => void }) => {
   return (
@@ -14,51 +14,35 @@ const ChatboxStart = ({ setInput }: { setInput: (msg: string) => void }) => {
         </p>
       </div>
 
-      {/* Buttons in flex-col for vertical stack, attractive card-like */}
       <div className="flex flex-col space-y-4 max-w-md mx-auto">
-        <button 
-          onClick={() => setInput('Create New Trip')}
-          className="group relative flex items-center justify-center p-6 bg-white border-2 border-gray-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:border-orange-500 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-200"
-        >
-          <div className="absolute left-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <ArrowRight className="w-6 h-6 text-orange-500" />
-          </div>
-          <span className="font-semibold text-gray-800 text-lg flex-1 text-left">Create New Trip</span>
-          <div className="w-3 h-3 bg-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
 
-        <button 
-          onClick={() => setInput('Inspire me where to go')}
-          className="group relative flex items-center justify-center p-6 bg-white border-2 border-gray-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:border-orange-500 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-200"
-        >
-          <div className="absolute left-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Sparkles className="w-6 h-6 text-orange-500" />
-          </div>
-          <span className="font-semibold text-gray-800 text-lg flex-1 text-left">Inspire Me Where to Go</span>
-          <div className="w-3 h-3 bg-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
+        {/* Reusable button component structure */}
+        {[
+          { label: "Create New Trip", icon: <ArrowRight className="w-6 h-6 text-orange-500" />, input: "Create New Trip" },
+          { label: "Inspire Me Where to Go", icon: <Sparkles className="w-6 h-6 text-orange-500" />, input: "Inspire me where to go" },
+          { label: "Discover Hidden Gems", icon: <MapPin className="w-6 h-6 text-orange-500" />, input: "Discover Hidden Gems" },
+          { label: "Adventure Destinations", icon: <Mountain className="w-6 h-6 text-orange-500" />, input: "Adventure Destination" },
+        ].map((b, i) => (
+          <button
+            key={i}
+            onClick={() => setInput(b.input)}
+            className="group relative grid grid-cols-[40px_1fr_8px] items-center p-6 bg-white border-2 border-gray-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:border-orange-500 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-200"
+          >
+            {/* Left Icon (slides in on hover) */}
+            <div className="opacity-0 group-hover:opacity-100 -translate-x-3 group-hover:translate-x-0 transition-all duration-300">
+              {b.icon}
+            </div>
 
-        <button 
-          onClick={() => setInput('Discover Hidden Gems')}
-          className="group relative flex items-center justify-center p-6 bg-white border-2 border-gray-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:border-orange-500 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-200"
-        >
-          <div className="absolute left-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <MapPin className="w-6 h-6 text-orange-500" />
-          </div>
-          <span className="font-semibold text-gray-800 text-lg flex-1 text-left">Discover Hidden Gems</span>
-          <div className="w-3 h-3 bg-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
+            {/* Text stays fixed — no shifting */}
+            <span className="font-semibold text-gray-800 text-lg text-left">
+              {b.label}
+            </span>
 
-        <button 
-          onClick={() => setInput('Adventure Destination')}
-          className="group relative flex items-center justify-center p-6 bg-white border-2 border-gray-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:border-orange-500 hover:bg-orange-50 focus:outline-none focus:ring-4 focus:ring-orange-200 "
-        >
-          <div className="absolute left-4 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Mountain className="w-6 h-6 text-orange-500" />
-          </div>
-          <span className="font-semibold text-gray-800 text-lg flex-1 text-left">Adventure Destinations</span>
-          <div className="w-3 h-3 bg-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
+            {/* Small orange dot */}
+            <div className="w-3 h-3 bg-orange-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
+        ))}
+
       </div>
     </div>
   )
