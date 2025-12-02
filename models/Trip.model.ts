@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 export interface TripSave {
-  user: string; // user id
+  user: mongoose.Types.ObjectId; // user id
   destination: string;
   duration: string;
   origin: string;

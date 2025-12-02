@@ -1,6 +1,5 @@
 import ChatwithAi from '@/_components/ChatwithAi'
-import ShowingPlaceMap from '@/_components/ShowingPlaceMap'
-import React from 'react'
+import ShowingPlaceInMap from '@/_components/ShowingPlaceInMap'
 
 const page = () => {
   return (
@@ -13,7 +12,7 @@ const page = () => {
 
       {/* Right Section - Map */}
       <div className="w-1/2 h-full">
-        <ShowingPlaceMap />
+        <ShowingPlaceInMap/>
       </div>
 
     </div>

@@ -5,6 +5,7 @@ import { Calendar, Hotel, MapPin, Star, Sun } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import axios from "axios";
+import { Button } from "@/components/ui/button";
 
 interface TripPlan {
   destination: string;
@@ -42,6 +43,20 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const handleMap= async(hotel_address:string)=>{
+
+    try {
+        
+        const res= await axios.post('/api/googleMapApi',hotel_address);
+
+        if(res.status===404){
+           return toast.error("address not found");
+        }
+        
+    } catch (error:any) {
+        toast.error(error)
+    }
+  }
   const handleSaveTrip = async () => {
     try {
       setSaving(true);
@@ -85,14 +100,14 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
           Recommended Hotels
         </h2>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="flex flex-col flex-wrap gap-8">
           {plan.hotels.map((hotel, i) => (
             <div key={i} className="bg-white rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl transition">
               <div className="relative h-64 bg-gray-200">
                 <Image
                   src={
                     hotel.hotel_image_url ||
-                    "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800"
+                    "https://images.unsplash.com/photo-1618773928121-c32242e63f39?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                   }
                   alt={hotel.hotel_name}
                   fill
@@ -125,6 +140,7 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                 </div>
 
                 <p className="text-sm text-gray-500 mt-4">{hotel.hotel_address}</p>
+                <Button onClick={()=>handleMap(hotel.hotel_address)} className="">View on Map</Button>
               </div>
             </div>
           ))}
