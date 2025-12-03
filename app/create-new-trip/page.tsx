@@ -15,7 +15,7 @@ const page = () => {
         <ShowingPlaceInMap/>
       </div>
 
-    </div>
+    </div >
   )
 }
 

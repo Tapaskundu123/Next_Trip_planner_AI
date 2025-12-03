@@ -7,13 +7,15 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ChatboxStart from './ChatboxStart';
 import TripPlanRenderer from './TripPlanRenderer';
+import { useTripStore } from '@/store/useTripStore';
+
 interface ChatEntry {
   user: string;
   ai: string;
   ui?: string;
 }
 
-interface TripPlan {
+export interface TripPlan {
   destination: string;
   duration: string;
   origin: string;
@@ -73,7 +75,7 @@ const ChatwithAi = () => {
     const newEntry: ChatEntry = { user: userMessage, ai: "", ui: "none" };
     setChatHistory(prev => [...prev, newEntry]);
 
-    // Auto show loading when duration is likely being answered
+    // Show loading UI early when final plan is coming
     const isLikelyDuration = chatHistory.length >= 4 && /\d+/.test(userMessage);
     if (isLikelyDuration) {
       setChatHistory(prev => {
@@ -101,17 +103,20 @@ const ChatwithAi = () => {
 
       const data = await res.json();
 
-      // Handle final trip plan
+      // Handle final trip plan (this was broken before!)
       if (data.ui === "final" && data.resp) {
         try {
-          const plan = JSON.parse(data.resp);
+          const plan: TripPlan = JSON.parse(data.resp);
           setCurrentPlan(plan);
+
+          // Send plan to Zustand store so Map can read it
+          useTripStore.getState().setCurrentPlan(plan);
         } catch (err) {
           console.error("Failed to parse trip plan JSON:", err);
         }
       }
 
-      // Update AI response
+      // Update AI response in chat
       setChatHistory(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
@@ -122,7 +127,7 @@ const ChatwithAi = () => {
         return updated;
       });
 
-      // Hide start screen after first message
+      // Hide start screen after first interaction
       if (chatHistory.length === 0) {
         setShowStartScreen(false);
       }
@@ -220,6 +225,7 @@ const ChatwithAi = () => {
       );
     }
 
+    // Final trip plan — render the full UI
     if (ui === "final" && currentPlan) {
       return <TripPlanRenderer plan={currentPlan} />;
     }
@@ -304,7 +310,5 @@ const ChatwithAi = () => {
     </div>
   );
 };
-
-
 
 export default ChatwithAi;

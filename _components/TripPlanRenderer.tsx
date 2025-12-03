@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, Hotel, MapPin, Star, Sun } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 interface TripPlan {
   destination: string;
@@ -40,28 +41,98 @@ interface TripPlan {
 }
 
 const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
+  const router = useRouter();
+
+  // ⭐ LOCAL STATE — will store updated images
+  const [updatedPlan, setUpdatedPlan] = useState<TripPlan>(plan);
+
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const handleMap= async(hotel_address:string)=>{
-
-    try {
-        
-        const res= await axios.post('/api/googleMapApi',hotel_address);
-
-        if(res.status===404){
-           return toast.error("address not found");
+  // ⭐ Load images from Unsplash
+  useEffect(() => {
+    async function loadImages() {
+      try {
+        const accessKey = process.env.NEXT_PUBLIC_UNSPLASH_KEY;
+        if (!accessKey) {
+          console.error("Unsplash key missing");
+          return;
         }
-        
-    } catch (error:any) {
-        toast.error(error)
+
+        const hotels = [...updatedPlan.hotels];
+        const itinerary = [...updatedPlan.itinerary];
+
+        // ========================
+        // HOTEL IMAGES
+        // ========================
+        const hotelNames = hotels.map((h) => h.hotel_name);
+
+        const hotelRequests = hotelNames.map((query) =>
+          axios.get("https://api.unsplash.com/search/photos", {
+            params: { query },
+            headers: { Authorization: `Client-ID ${accessKey}` },
+          })
+        );
+
+        const hotelResponses = await Promise.all(hotelRequests);
+
+        hotelResponses.forEach((res, index) => {
+          const url = res.data.results?.[0]?.urls?.regular;
+          if (url && !hotels[index].hotel_image_url) {
+            hotels[index].hotel_image_url = url;
+          }
+        });
+
+        // ========================
+        // ACTIVITY IMAGES
+        // ========================
+        const activityNames = itinerary.flatMap((d) =>
+          d.activities.map((a) => a.place_name)
+        );
+
+        const activityRequests = activityNames.map((query) =>
+          axios.get("https://api.unsplash.com/search/photos", {
+            params: { query },
+            headers: { Authorization: `Client-ID ${accessKey}` },
+          })
+        );
+
+        const activityResponses = await Promise.all(activityRequests);
+
+        let imgIndex = 0;
+        itinerary.forEach((day) => {
+          day.activities.forEach((act) => {
+            const url = activityResponses[imgIndex]?.data?.results?.[0]?.urls?.regular;
+            if (url && !act.place_image_url) {
+              act.place_image_url = url;
+            }
+            imgIndex++;
+          });
+        });
+
+        // ⭐ Update local state with new images
+        setUpdatedPlan({
+          ...updatedPlan,
+          hotels,
+          itinerary,
+        });
+
+      } catch (err) {
+        console.error("Unsplash error:", err);
+      }
     }
-  }
+
+    loadImages();
+  }, [updatedPlan]);
+
+  // ==========================
+  // SAVE TRIP
+  // ==========================
   const handleSaveTrip = async () => {
     try {
       setSaving(true);
 
-      const res = await axios.post("/api/saveTrip", plan);
+      const res = await axios.post("/api/saveTrip", updatedPlan);
 
       if (res.data.success) {
         setSaved(true);
@@ -77,23 +148,32 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
     }
   };
 
+  const handleMap = (address: string) => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      address
+    )}`;
+    window.open(url, "_blank");
+  };
+
+  const p = updatedPlan; // cleaner usage
+
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-12">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 text-white rounded-3xl shadow-2xl overflow-hidden">
         <div className="p-10 text-center md:text-left">
           <h1 className="text-5xl font-bold flex items-center justify-center md:justify-start gap-4">
             <MapPin className="w-14 h-14" />
-            Trip to {plan.destination}
+            Trip to {p.destination}
           </h1>
           <p className="text-xl mt-4 opacity-95">
-            {plan.origin} → {plan.destination} • {plan.duration} •{" "}
-            {plan.group_size} • {plan.budget} Budget
+            {p.origin} → {p.destination} • {p.duration} •{" "}
+            {p.group_size} • {p.budget} Budget
           </p>
         </div>
       </div>
 
-      {/* Hotels Section */}
+      {/* Hotels */}
       <section>
         <h2 className="text-3xl font-bold mb-8 flex items-center gap-4">
           <Hotel className="w-10 h-10 text-orange-500" />
@@ -101,13 +181,16 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
         </h2>
 
         <div className="flex flex-col flex-wrap gap-8">
-          {plan.hotels.map((hotel, i) => (
-            <div key={i} className="bg-white rounded-3xl shadow-xl overflow-hidden hover:shadow-2xl transition">
+          {p.hotels.map((hotel, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-3xl shadow-xl overflow-hidden"
+            >
               <div className="relative h-64 bg-gray-200">
                 <Image
                   src={
                     hotel.hotel_image_url ||
-                    "https://images.unsplash.com/photo-1618773928121-c32242e63f39?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+                    "https://images.unsplash.com/photo-1618773928121-c32242e63f39"
                   }
                   alt={hotel.hotel_name}
                   fill
@@ -139,8 +222,12 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-500 mt-4">{hotel.hotel_address}</p>
-                <Button onClick={()=>handleMap(hotel.hotel_address)} className="">View on Map</Button>
+                <p className="text-sm text-gray-500 mt-4">
+                  {hotel.hotel_address}
+                </p>
+                <Button onClick={() => handleMap(hotel.hotel_address)}>
+                  View on Map
+                </Button>
               </div>
             </div>
           ))}
@@ -154,25 +241,23 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
           Your Detailed Itinerary
         </h2>
 
-        {plan.itinerary.map((day) => (
+        {p.itinerary.map((day) => (
           <div key={day.day} className="bg-white rounded-3xl shadow-xl p-8 mb-10">
             <h3 className="text-3xl font-bold text-orange-600 mb-4">
-              Day {day.day}{" "}
+              Day {day.day}
               <Sun className="inline w-8 h-8 text-yellow-500 ml-3" />
             </h3>
 
-            <p className="text-xl italic text-gray-700 mb-8">
-              {day.day_plan}
-            </p>
+            <p className="text-xl italic text-gray-700 mb-8">{day.day_plan}</p>
 
             <div className="space-y-8">
               {day.activities.map((act, idx) => (
                 <div key={idx} className="flex gap-6 bg-gray-50 rounded-2xl p-6">
-                  <div className="relative w-40 h-40 rounded-2xl overflow-hidden shadow-md flex-shrink-0">
+                  <div className="relative w-40 h-40 rounded-2xl overflow-hidden shadow-md">
                     <Image
                       src={
                         act.place_image_url ||
-                        "https://images.unsplash.com/photo-1499853873796-d20d0e0dfaa9?w=600"
+                        "https://images.unsplash.com/photo-1499853873796-d20d0e0dfaa9"
                       }
                       alt={act.place_name}
                       fill
@@ -181,13 +266,9 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                   </div>
 
                   <div className="flex-1">
-                    <h4 className="text-2xl font-bold text-gray-800">
-                      {act.place_name}
-                    </h4>
+                    <h4 className="text-2xl font-bold">{act.place_name}</h4>
 
-                    <p className="text-gray-700 mt-3 leading-relaxed">
-                      {act.place_details}
-                    </p>
+                    <p className="text-gray-700 mt-3">{act.place_details}</p>
 
                     <div className="grid grid-cols-2 gap-4 mt-6 text-sm">
                       <div>
@@ -212,18 +293,36 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
         ))}
       </section>
 
-      <div className="text-center py-12">
-     { saved?
-      <button disabled={saved} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl font-bold px-16 py-6 rounded-full shadow-2xl hover:scale-105 transition transform disabled:opacity-50">Trip details Saved</button>
-     :
-      <button
-          onClick={handleSaveTrip}
-          disabled={saving}
-          className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl font-bold px-16 py-6 rounded-full shadow-2xl hover:scale-105 transition transform disabled:opacity-50"
-        >
-          {saving ? "Saving..." : "Book This Trip Now!"}
-        </button>
-}
+      {/* SAVE TRIP */}
+      <div className="text-center py-16">
+        {!saved ? (
+          <button
+            onClick={handleSaveTrip}
+            disabled={saving}
+            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl font-bold px-20 py-6 rounded-full shadow-2xl hover:scale-105 transition disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save & Book This Trip"}
+          </button>
+        ) : (
+          <div>
+            <h2 className="text-4xl font-bold">Trip Saved Successfully!</h2>
+            <div className="mt-10 flex gap-6 justify-center">
+              <button
+                onClick={() => router.push("/my-trips")}
+                className="bg-blue-600 text-white px-12 py-4 rounded-full text-xl"
+              >
+                View My Trips
+              </button>
+
+              <button
+                onClick={() => router.refresh()}
+                className="bg-white border-2 border-purple-600 text-purple-700 px-12 py-4 rounded-full text-xl"
+              >
+                Start New Trip Chat
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

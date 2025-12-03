@@ -1,8 +1,10 @@
+'use client'
 
 import Image from 'next/image';
 import logo from '../public/logo.svg'
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 const menuItem= [
   {name:'Home',link:'./link'},
@@ -10,6 +12,9 @@ const menuItem= [
   {name:'Contact us',link:'./contact-us'},
 ]
 const Header = () => {
+
+  const router= useRouter();
+ 
   return (
     <div className='flex  justify-between p-4'>
       <div className='flex gap-2 items-center'>
@@ -21,7 +26,11 @@ const Header = () => {
            <Link key={index} href={item.link} className='hover:text-amber-500'>{item.name}</Link>
          )}
       </ul>
-      <Button>Get Started</Button>
+      <div className='flex gap-4'>
+          <Button onClick={()=>router.push('/my-trips')} className='bg-blue-500 cursor-pointer'>My Trips</Button>
+          <Button className='cursor-pointer' onClick={()=>router.push('/create-new-trip')}>Get Started</Button>
+      </div>
+      
     </div>
   )
 }

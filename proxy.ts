@@ -10,9 +10,9 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
 
   // If logged in and trying to access login/signup
-  if (isPublicPath && token) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
+  // if (isPublicPath && token) {
+  //   return NextResponse.redirect(new URL('/', request.url));
+  // }
 
   // If not logged in and trying to access protected routes
   if (!isPublicPath && !token) {
@@ -21,7 +21,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/signup','/create-new-trip']
+  matcher: ['/', '/login', '/signup','/create-new-trip','/my-trips']
 };
 
 // 👇 This is the key line
