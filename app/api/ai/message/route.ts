@@ -6,14 +6,8 @@ const client = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
 });
 
-export async function POST(req: NextRequest) {
-  try {
-    const { message, history = [] } = await req.json();
-
-    const messages = [
-      {
-        role: "system",
-        content: `You are a Trip Planner AI. Your job is to collect travel details step by asking exactly ONE question at a time, in this strict order:
+const SYSTEM_PROMPT = `
+You are a Trip Planner AI. Your job is to collect travel details step by asking exactly ONE question at a time, in this strict order:
 
 1. Starting location (origin)
 2. Destination
@@ -26,13 +20,11 @@ CRITICAL RULES:
 - For the first 4 questions, respond like this:
   {"resp": "Your question or confirmation", "ui": "none" or "budget/groupSize/tripDuration"}
 
-- You may use special UI hints when asking these:
-  • When asking for group size → {"resp": "Who are you traveling with?", "ui": "groupSize"}
-  • When asking for budget → {"resp": "What's your budget level?", "ui": "budget"}
-  • When asking for duration → {"resp": "How many days will your trip be?", "ui": "tripDuration"}
+- When asking for group size → {"resp": "Who are you traveling with?", "ui": "groupSize"}
+- When asking for budget → {"resp": "What's your budget level?", "ui": "budget"}
+- When asking for duration → {"resp": "How many days will your trip be?", "ui": "tripDuration"}
 
 - THE MOMENT you receive the duration (5th answer), you MUST generate the FULL trip plan in ONE single JSON response with this exact structure:
-
 {
   "resp": "Here is your complete personalized trip plan!",
   "ui": "final",
@@ -76,14 +68,19 @@ CRITICAL RULES:
 }
 
 FINAL INSTRUCTIONS:
-- Do NOT say "Please wait", "One moment", or "Generating..." → your frontend handles loading.
-- Do NOT output two separate JSONs. Only one response after duration.
-- Use realistic data: real city names, plausible hotel names, Unsplash-style image URLs.
+- Do NOT say "Please wait", "One moment", or "Generating..." → frontend handles loading.
 - Always output perfectly valid JSON with no trailing commas or comments.
 - Current date: December 2025
-`,
-      },
-      ...history.flatMap((entry: any) => [
+`;
+
+export async function POST(req: NextRequest) {
+  try {
+    const { message, history = [] } = await req.json();
+
+    // Build message array for model
+    const messages = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...history.flatMap((entry: { user: string; ai?: string }) => [
         { role: "user", content: entry.user },
         ...(entry.ai ? [{ role: "assistant", content: entry.ai }] : []),
       ]),
@@ -91,49 +88,45 @@ FINAL INSTRUCTIONS:
     ];
 
     const completion = await client.chat.completions.create({
-      model: "x-ai/grok-4.1-fast:free",
+      model: "x-ai/grok-4.1-fast",
       messages,
-      temperature: 0.4,
+      temperature: 0.2,
       max_tokens: 2500,
-      response_format: { type: "json_object" },
+      response_format: { type: "json_object" }, // ← ADD THIS LINE
     });
 
-    let raw = completion.choices[0]?.message?.content?.trim() || "{}";
-    raw = raw.replace(/```json|```/g, "").trim();
+    const content = completion.choices?.[0]?.message?.content || "{}";
 
-    let parsed;
+    // Clean and parse JSON
+    let cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    
     try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      console.error("Invalid JSON:", raw);
-      return NextResponse.json({
-        resp: "One moment please, finalizing your trip…",
-        ui: "loading",
-      });
+      const parsed = JSON.parse(cleaned);
+      
+      // If trip_plan exists, return it as an object (not stringified)
+      if (parsed.trip_plan) {
+        return NextResponse.json({
+          resp: parsed.resp || "Your trip plan is ready!",
+          ui: "final",
+          trip_plan: parsed.trip_plan, // ← Return as object
+        });
+      }
+      
+      // Normal response
+      if (parsed && typeof parsed === "object") {
+        return NextResponse.json(parsed);
+      }
+      
+      return NextResponse.json({ resp: content, ui: "none" });
+    } catch (err) {
+      console.error("JSON Parse Error:", err, "\nRaw content:", content);
+      return NextResponse.json({ resp: content, ui: "none" });
     }
-
-    // Detect loading message or final plan
-    if (parsed.resp && parsed.resp.includes("wait")) {
-      return NextResponse.json({ resp: parsed.resp, ui: "loading" });
-    }
-
-    if (parsed.trip_plan) {
-      return NextResponse.json({
-        resp: JSON.stringify(parsed.trip_plan),
-        ui: "final",
-      });
-    }
-
-    // Fallback Q&A
-    return NextResponse.json({
-      resp: parsed.resp || "Got it!",
-      ui: parsed.ui || "none",
-    });
-
-  } catch (error) {
-    return NextResponse.json({
-      resp: "Please wait a moment while I generate your trip plan…",
-      ui: "loading",
-    });
+  } catch (error: any) {
+    console.error("OpenRouter Error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to generate response" },
+      { status: 500 }
+    );
   }
 }

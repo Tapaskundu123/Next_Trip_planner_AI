@@ -71,23 +71,10 @@ const ChatwithAi = () => {
     const userMessage = messageToSend;
     if (!customMessage) setUserInput("");
     setIsLoading(true);
+    setShowStartScreen(false);
 
     const newEntry: ChatEntry = { user: userMessage, ai: "", ui: "none" };
     setChatHistory(prev => [...prev, newEntry]);
-
-    // Show loading UI early when final plan is coming
-    const isLikelyDuration = chatHistory.length >= 4 && /\d+/.test(userMessage);
-    if (isLikelyDuration) {
-      setChatHistory(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          ai: "Perfect! Generating your personalized trip plan…",
-          ui: "loading"
-        };
-        return updated;
-      });
-    }
 
     try {
       const res = await fetch('/api/ai/message', {
@@ -95,7 +82,7 @@ const ChatwithAi = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage,
-          history: [...chatHistory, newEntry]
+          history: chatHistory
         })
       });
 
@@ -103,37 +90,41 @@ const ChatwithAi = () => {
 
       const data = await res.json();
 
-      // Handle final trip plan (this was broken before!)
-      if (data.ui === "final" && data.resp) {
-        try {
-          const plan: TripPlan = JSON.parse(data.resp);
-          setCurrentPlan(plan);
+      // Handle final trip plan - trip_plan is already an object, no parsing needed
+      if (data.ui === "final" && data.trip_plan) {
+        const plan: TripPlan = data.trip_plan; // ← No JSON.parse() needed!
+        setCurrentPlan(plan);
+        
+        // Send to Zustand store
+        useTripStore.getState().setCurrentPlan(plan);
 
-          // Send plan to Zustand store so Map can read it
-          useTripStore.getState().setCurrentPlan(plan);
-        } catch (err) {
-          console.error("Failed to parse trip plan JSON:", err);
-        }
-      }
-
-      // Update AI response in chat
-      setChatHistory(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          ai: data.resp || "",
-          ui: data.ui || "none"
-        };
-        return updated;
-      });
-
-      // Hide start screen after first interaction
-      if (chatHistory.length === 0) {
-        setShowStartScreen(false);
+        // Update chat with the response message
+        setChatHistory(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            ai: data.resp || "✨ Your trip plan is ready!",
+            ui: "final"
+          };
+          return updated;
+        });
+      } else {
+        // Normal AI response
+        setChatHistory(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            ai: data.resp || "",
+            ui: data.ui || "none"
+          };
+          return updated;
+        });
       }
 
     } catch (error) {
+      console.error("Chat error:", error);
       toast.error("Failed to connect. Please try again.");
+      
       setChatHistory(prev => {
         const updated = [...prev];
         updated[updated.length - 1].ai = "Sorry, I couldn't respond right now. Please try again later.";
@@ -173,7 +164,8 @@ const ChatwithAi = () => {
               <button
                 key={opt}
                 onClick={() => handleCardClick(opt)}
-                className="p-6 bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg hover:scale-105 transition border border-green-200"
+                disabled={isLoading}
+                className="p-6 bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg hover:scale-105 transition border border-green-200 disabled:opacity-50"
               >
                 <DollarSign className="w-10 h-10 text-green-600 mx-auto mb-3" />
                 <div className="font-bold text-xl">{opt}</div>
@@ -194,7 +186,8 @@ const ChatwithAi = () => {
               <button
                 key={opt}
                 onClick={() => handleCardClick(opt)}
-                className="p-6 bg-gradient-to-br from-blue-50 to-cyan-100 rounded-2xl shadow-lg hover:scale-105 transition border border-blue-200"
+                disabled={isLoading}
+                className="p-6 bg-gradient-to-br from-blue-50 to-cyan-100 rounded-2xl shadow-lg hover:scale-105 transition border border-blue-200 disabled:opacity-50"
               >
                 <Users className="w-10 h-10 text-blue-600 mx-auto mb-3" />
                 <div className="font-bold text-xl">{opt}</div>
@@ -214,7 +207,8 @@ const ChatwithAi = () => {
               <button
                 key={opt}
                 onClick={() => handleCardClick(opt)}
-                className="p-6 bg-gradient-to-br from-purple-50 to-indigo-100 rounded-2xl shadow-lg hover:scale-105 transition border border-purple-200"
+                disabled={isLoading}
+                className="p-6 bg-gradient-to-br from-purple-50 to-indigo-100 rounded-2xl shadow-lg hover:scale-105 transition border border-purple-200 disabled:opacity-50"
               >
                 <Calendar className="w-10 h-10 text-purple-600 mx-auto mb-3" />
                 <div className="font-bold text-xl">{opt}</div>
@@ -225,12 +219,12 @@ const ChatwithAi = () => {
       );
     }
 
-    // Final trip plan — render the full UI
+    // Final trip plan
     if (ui === "final" && currentPlan) {
       return <TripPlanRenderer plan={currentPlan} />;
     }
 
-    // Default: plain markdown
+    // Default: markdown
     return <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>;
   };
 
@@ -245,12 +239,10 @@ const ChatwithAi = () => {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white">
-
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-8">
         {chatHistory.map((entry, i) => (
           <div key={i} className="space-y-4">
-
             {/* User Message */}
             {entry.user && (
               <div className="flex justify-end">
