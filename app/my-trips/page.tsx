@@ -9,6 +9,7 @@ interface TripDetails {
   duration: string;
   budget: string;
   group_size: string;
+  origin:string
 }
 
 const AllTripsPage = () => {
@@ -18,7 +19,7 @@ const AllTripsPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get("/api/getViewAllTrips");
+        const res = await axios.get("/api/getViewAllTrips",{withCredentials: true });
 
         if (res.status === 404) {
           toast.error("No Trips found");
@@ -52,7 +53,7 @@ const AllTripsPage = () => {
               key={index}
               className="border rounded-lg p-4 shadow-sm bg-white"
             >
-              <h2 className="text-lg font-semibold">{item.destination}</h2>
+              <h2 className="text-lg font-semibold">{item.origin}-{item.destination}</h2>
               <p className="text-sm text-gray-600">Duration: {item.duration}</p>
               <p className="text-sm text-gray-600">Budget: {item.budget}</p>
               <p className="text-sm text-gray-600">Group Size: {item.group_size}</p>

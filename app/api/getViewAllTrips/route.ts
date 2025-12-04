@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { Trip } from "@/models/Trip.model";
+import { connectDB } from "@/lib/mongodb";
 
 interface DecodedData {
   id: string;
@@ -19,6 +20,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    await connectDB();
     // 2️⃣ Verify token
     const decoded = jwt.verify(
       token,
