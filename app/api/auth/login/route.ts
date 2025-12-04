@@ -42,16 +42,18 @@ export async function POST(req: NextRequest) {
       { expiresIn: "1d" }
     );
 
-    // Response with cookie
+    // Create response
     const response = NextResponse.json(
-      { success: true, message: "Login successful" },
-      { status: 200 }
+      { success: true, message: "Login successful" }
     );
 
-    response.cookies.set("token", token, {
+    // Set cookie
+    response.cookies.set({
+      name: "token",
+      value: token,
       httpOnly: true,
-      secure: process.env.NODE_ENV==="production",      // must be false in localhost
-      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production" ? true : false, // MUST BE false on localhost
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       path: "/",
     });
 

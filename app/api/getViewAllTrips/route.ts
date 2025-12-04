@@ -25,10 +25,10 @@ export async function GET(req: NextRequest) {
       process.env.JWT_SECRET_KEY as string
     ) as DecodedData;
 
-    const email = decoded.email;
+    const id = decoded.id;
 
     // 3️⃣ Fetch saved trips using email
-    const savedTrips = await Trip.find({ email: email });
+    const savedTrips = await Trip.find({ user:id });
 
     if (!savedTrips || savedTrips.length === 0) {
       return NextResponse.json(
