@@ -13,6 +13,7 @@ interface TripDetails {
   budget: string;
   group_size: string;
   origin: string;
+  _id:string
 }
 
 const AllTripsPage = () => {
@@ -43,6 +44,7 @@ const AllTripsPage = () => {
     fetchData();
   }, []);
 
+ 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[70vh] text-lg animate-pulse">
@@ -103,6 +105,7 @@ const AllTripsPage = () => {
                   <span className="font-medium">{item.group_size}</span>
                 </p>
               </div>
+              <Button onClick={()=> router.push(`/my-trips/${item._id}`)}>View Details</Button>
             </div>
           ))}
         </div>
