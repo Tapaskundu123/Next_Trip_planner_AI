@@ -63,7 +63,6 @@ const SavedTripPage = () => {
         </div>
       </div>
 
-
       {/* HOTELS SECTION */}
       <section>
         <h2 className="text-3xl font-bold mb-8 flex items-center gap-4">
@@ -127,7 +126,6 @@ const SavedTripPage = () => {
         </div>
       </section>
 
-
       {/* ITINERARY */}
       <section>
         <h2 className="text-3xl font-bold mb-8 flex items-center gap-4">
@@ -144,7 +142,7 @@ const SavedTripPage = () => {
             <p className="text-xl italic text-gray-700">{day.day_plan}</p>
 
             {day.activities.map((act, i) => (
-              <div
+              <div         
                 key={i}
                 className="flex flex-col md:flex-row gap-6 bg-gray-50 rounded-2xl p-6"
               >
@@ -173,7 +171,6 @@ const SavedTripPage = () => {
           </div>
         ))}
       </section>
-
 
       {/* BACK TO MY TRIPS */}
       <div className="text-center">
