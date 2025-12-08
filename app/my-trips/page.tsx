@@ -60,7 +60,7 @@ const AllTripsPage = () => {
       <Button
         variant="ghost"
         className="flex items-center gap-2 mb-4 hover:bg-gray-100"
-        onClick={() => router.back()}
+        onClick={() => router.push('/')}
       >
         <ArrowBigLeft className="w-5 h-5" /> Go Back
       </Button>

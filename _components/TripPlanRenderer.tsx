@@ -190,7 +190,7 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                 <Image
                   src={
                     hotel.hotel_image_url ||
-                    "https://images.unsplash.com/photo-1618773928121-c32242e63f39"
+                    "/hotel.jpg"
                   }
                   alt={hotel.hotel_name}
                   fill
@@ -257,7 +257,7 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                     <Image
                       src={
                         act.place_image_url ||
-                        "https://images.unsplash.com/photo-1499853873796-d20d0e0dfaa9"
+                        "/trip.jpg"
                       }
                       alt={act.place_name}
                       fill
