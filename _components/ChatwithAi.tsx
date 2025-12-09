@@ -51,8 +51,10 @@ const ChatwithAi = () => {
   const [userInput, setUserInput] = useState("");
   const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentPlan, setCurrentPlan] = useState<TripPlan | null>(null);
   const [showStartScreen, setShowStartScreen] = useState(true);
+
+  // ⭐ Use Zustand for global plan state (no local currentPlan needed)
+  const { setCurrentPlan } = useTripStore();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -71,10 +73,24 @@ const ChatwithAi = () => {
     const userMessage = messageToSend;
     if (!customMessage) setUserInput("");
     setIsLoading(true);
-    setShowStartScreen(false);
+    setShowStartScreen(false); // Hide start screen after first interaction
 
     const newEntry: ChatEntry = { user: userMessage, ai: "", ui: "none" };
     setChatHistory(prev => [...prev, newEntry]);
+
+    // Show loading UI early when final plan is coming
+    const isLikelyDuration = chatHistory.length >= 4 && /\d+/.test(userMessage);
+    if (isLikelyDuration) {
+      setChatHistory(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          ...updated[updated.length - 1],
+          ai: "Perfect! Generating your personalized trip plan…",
+          ui: "loading"
+        };
+        return updated;
+      });
+    }
 
     try {
       const res = await fetch('/api/ai/message', {
@@ -82,23 +98,49 @@ const ChatwithAi = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage,
-          history: chatHistory
+          history: chatHistory // Note: Send previous history, not including newEntry
         })
       });
 
       if (!res.ok) throw new Error("Network error");
 
-      const data = await res.json();
+      // ⭐ BETTER HANDLING: Read as text first, then parse JSON
+      const rawBody = await res.text();
+      let data;
+      try {
+        data = JSON.parse(rawBody);
+      } catch (parseError) {
+        console.error("JSON Parse Error:", parseError);
+        console.error("Raw Response Body:", rawBody);
+        throw new Error("Invalid response from server – try again.");
+      }
 
-      // Handle final trip plan - trip_plan is already an object, no parsing needed
+      // Handle final trip plan (FIXED: Use data.trip_plan, not data.resp)
       if (data.ui === "final" && data.trip_plan) {
-        const plan: TripPlan = data.trip_plan; // ← No JSON.parse() needed!
-        setCurrentPlan(plan);
-        
-        // Send to Zustand store
-        useTripStore.getState().setCurrentPlan(plan);
+        let plan: TripPlan;
+        if (typeof data.trip_plan === 'string') {
+          // If backend sends as JSON string, parse it
+          try {
+            plan = JSON.parse(data.trip_plan);
+          } catch (err) {
+            console.error("Failed to parse trip_plan JSON:", err);
+            toast.error("Plan format error – regenerating...");
+            return;
+          }
+        } else {
+          // Assume it's already an object
+          plan = data.trip_plan;
+        }
 
-        // Update chat with the response message
+        // Validate basic structure
+        if (!plan.destination || plan.hotels.length === 0 || plan.itinerary.length === 0) {
+          throw new Error("Incomplete trip plan received.");
+        }
+
+        // Set to Zustand store (global)
+        setCurrentPlan(plan);
+
+        // Update chat with success message
         setChatHistory(prev => {
           const updated = [...prev];
           updated[updated.length - 1] = {
@@ -108,26 +150,33 @@ const ChatwithAi = () => {
           };
           return updated;
         });
-      } else {
-        // Normal AI response
-        setChatHistory(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...updated[updated.length - 1],
-            ai: data.resp || "",
-            ui: data.ui || "none"
-          };
-          return updated;
-        });
+
+        toast.success("Trip plan generated successfully!");
+        return; // Exit early – plan is set
       }
 
-    } catch (error) {
+      // Update AI response in chat for non-final responses
+      setChatHistory(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          ...updated[updated.length - 1],
+          ai: data.resp || "",
+          ui: data.ui || "none"
+        };
+        return updated;
+      });
+
+    } catch (error: any) {
       console.error("Chat error:", error);
-      toast.error("Failed to connect. Please try again.");
+      const errorMsg = error.message.includes("Incomplete") 
+        ? "Trip plan incomplete – try a simpler query." 
+        : "Failed to connect. Please try again.";
+      toast.error(errorMsg);
       
       setChatHistory(prev => {
         const updated = [...prev];
-        updated[updated.length - 1].ai = "Sorry, I couldn't respond right now. Please try again later.";
+        updated[updated.length - 1].ai = errorMsg;
+        updated[updated.length - 1].ui = "none";
         return updated;
       });
     } finally {
@@ -136,13 +185,15 @@ const ChatwithAi = () => {
   };
 
   const handleStartClick = (message: string) => {
-    setShowStartScreen(false);
     sendMessage(undefined, message);
   };
 
   const handleCardClick = (value: string) => {
     sendMessage(undefined, value);
   };
+
+  // ⭐ Get currentPlan from Zustand for rendering
+  const { currentPlan } = useTripStore();
 
   const renderMessage = (text: string, ui: string): React.ReactNode => {
     if (ui === "loading") {
@@ -219,12 +270,12 @@ const ChatwithAi = () => {
       );
     }
 
-    // Final trip plan
+    // Final trip plan — render the full UI using Zustand
     if (ui === "final" && currentPlan) {
       return <TripPlanRenderer plan={currentPlan} />;
     }
 
-    // Default: markdown
+    // Default: plain markdown
     return <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>;
   };
 

@@ -190,7 +190,7 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                 <Image
                   src={
                     hotel.hotel_image_url ||
-                    "/hotel.jpg"
+                    "https://images.unsplash.com/photo-1618773928121-c32242e63f39"
                   }
                   alt={hotel.hotel_name}
                   fill
@@ -250,6 +250,8 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
 
             <p className="text-xl italic text-gray-700 mb-8">{day.day_plan}</p>
 
+
+
             <div className="space-y-8">
               {day.activities.map((act, idx) => (
                 <div key={idx} className="flex gap-6 bg-gray-50 rounded-2xl p-6">
@@ -257,7 +259,7 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                     <Image
                       src={
                         act.place_image_url ||
-                        "/trip.jpg"
+                        "https://images.unsplash.com/photo-1499853873796-d20d0e0dfaa9"
                       }
                       alt={act.place_name}
                       fill
@@ -268,7 +270,11 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                   <div className="flex-1">
                     <h4 className="text-2xl font-bold">{act.place_name}</h4>
 
+
+
                     <p className="text-gray-700 mt-3">{act.place_details}</p>
+
+
 
                     <div className="grid grid-cols-2 gap-4 mt-6 text-sm">
                       <div>
