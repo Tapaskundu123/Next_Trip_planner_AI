@@ -4,9 +4,15 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
 const outfit = Outfit({
-  weight: "400",
   subsets: ["latin"],
+  weight: ["400", "600", "700"],
 });
+
+// ✅ Viewport config (ALLOWED in server component)
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -15,16 +21,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <body
-        className={outfit.className}
-      >
+      <body className={outfit.className}>
+        <Toaster position="top-right" />
         {children}
-          <Toaster position="top-right" />
       </body>
     </html>
   );
