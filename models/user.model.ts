@@ -5,6 +5,7 @@ export interface IUser {
     name: string;
     email: string;
     password: string;
+    price:number;
     _id?: mongoose.Types.ObjectId;
     createdAt?: Date;
     updatedAt?: Date;
@@ -22,6 +23,10 @@ const userSchema = new mongoose.Schema<IUser>({
     password: {
         type: String,
         required: [true, 'Password is required']
+    },
+    price:{
+        type: Number,
+        default:0
     }
 }, { timestamps: true });
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 
 const menuItem= [
-  {name:'Home',link:'./link'},
+  {name:'Home',link:'./'},
   {name:'Pricing',link:'./pricing'},
   {name:'Contact us',link:'./contact-us'},
 ]
