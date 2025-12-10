@@ -4,12 +4,12 @@ import { connectDB } from "@/lib/mongodb";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const { id } = params; // ✅ FIXED — no await
+    const { id } = await params; // ✅ MUST await params
 
     const trip = await Trip.findById(id);
 
