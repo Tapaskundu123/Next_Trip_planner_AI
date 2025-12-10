@@ -6,6 +6,7 @@ import React, {
   useState,
   createContext,
   useContext,
+  useCallback,
 } from "react";
 import {
   IconArrowNarrowLeft,
@@ -13,7 +14,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion } from "framer-motion"; // Fixed import (was "motion/react")
 import Image, { type ImageProps } from "next/image";
 import { useOutsideClick } from "@/hooks/use-outside-click";
 
@@ -74,7 +75,7 @@ export const Carousel = ({
     carouselRef.current?.scrollBy({ left: 300, behavior: "smooth" });
   };
 
-  const handleCardClose = (index: number) => {
+  const handleCardClose = useCallback((index: number) => {
     if (!carouselRef.current) return;
     const cardWidth = window.innerWidth < 768 ? 230 : 384;
     const gap = window.innerWidth < 768 ? 4 : 8;
@@ -85,7 +86,7 @@ export const Carousel = ({
     });
 
     setCurrentIndex(index);
-  };
+  }, []);
 
   return (
     <CarouselContext.Provider
@@ -156,6 +157,12 @@ export const Card = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const { onCardClose } = useContext(CarouselContext);
 
+  // Define handleClose FIRST, before using it in hooks/effects
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    onCardClose(index);
+  }, [setOpen, onCardClose, index]);
+
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "auto";
 
@@ -165,14 +172,10 @@ export const Card = ({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+  }, [open, handleClose]);
 
+  // Now use handleClose safely
   useOutsideClick(containerRef, handleClose);
-
-  const handleClose = () => {
-    setOpen(false);
-    onCardClose(index);
-  };
 
   return (
     <>
