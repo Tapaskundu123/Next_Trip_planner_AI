@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Trip } from "@/models/Trip.model";
+import { Trip } from "@/models/Trip.model.ts";
 import { connectDB } from "@/lib/mongodb";
 import jwt from "jsonwebtoken";
 
