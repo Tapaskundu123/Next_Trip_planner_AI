@@ -1,5 +1,5 @@
 import { connectDB } from "@/lib/mongodb";
-import Contact from "@/models/Contact.model.ts";
+import Contact from "@/models/ContactModel";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {

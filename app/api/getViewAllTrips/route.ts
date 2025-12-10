@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { Trip } from "@/models/Trip.model.ts";
+import { Trip } from "@/models/TripModel";
 import { connectDB } from "@/lib/mongodb";
 
 interface DecodedData {

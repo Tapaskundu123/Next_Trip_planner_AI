@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Trip } from "@/models/Trip.model.ts";
+import { Trip } from "@/models/TripModel";
 import { connectDB } from "@/lib/mongodb";
 
 export async function GET(
