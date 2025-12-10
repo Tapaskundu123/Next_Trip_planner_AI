@@ -8,7 +8,8 @@ export async function GET(
 ) {
   try {
     await connectDB();
-    const { id } = await params;
+
+    const { id } = params; // ✅ FIXED — no await
 
     const trip = await Trip.findById(id);
 
