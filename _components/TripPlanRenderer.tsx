@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import RouteMap from "./RouteMap";
 
 interface TripPlan {
   destination: string;
@@ -40,7 +41,7 @@ interface TripPlan {
   }>;
 }
 
-const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
+const TripPlanRenderer: React.FC<{ plan: TripPlan; onNewChat?: () => void }> = ({ plan, onNewChat }) => {
   const router = useRouter();
 
   // ⭐ LOCAL STATE — will store updated images
@@ -173,6 +174,15 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
         </div>
       </div>
 
+      {/* Route Map - Shows trip route from origin to destination */}
+      <section>
+        <h2 className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-3">
+          <MapPin className="w-8 h-8 sm:w-10 sm:h-10 text-red-500" />
+          Your Trip Route
+        </h2>
+        <RouteMap origin={p.origin} destination={p.destination} />
+      </section>
+
       {/* Hotels - Grid for better mobile/desktop layout */}
       <section>
         <h2 className="text-2xl sm:text-3xl font-bold mb-6 flex items-center gap-3">
@@ -210,11 +220,10 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                     {[...Array(5)].map((_, s) => (
                       <Star
                         key={s}
-                        className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                          s < Math.floor(hotel.rating)
-                            ? "text-yellow-400 fill-current"
-                            : "text-gray-300"
-                        }`}
+                        className={`w-5 h-5 sm:w-6 sm:h-6 ${s < Math.floor(hotel.rating)
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-300"
+                          }`}
                       />
                     ))}
                     <span className="ml-2 font-bold text-sm sm:text-base">{hotel.rating}</span>
@@ -222,7 +231,7 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                 </div>
 
                 <p className="text-sm text-gray-500 mb-4">{hotel.hotel_address}</p>
-                <Button 
+                <Button
                   onClick={() => handleMap(hotel.hotel_address)}
                   className="w-full sm:w-auto"
                   size="sm"
@@ -256,13 +265,13 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
                 <div key={idx} className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-2 flex flex-col gap-4 md:gap-6">
                   {/* Image - Stack on mobile, side-by-side on desktop */}
                   <div className="relative w-full h-48 md:h-60 rounded-xl sm:rounded-2xl overflow-hidden shadow-md flex-shrink-0">
-                   <Image
-                       src="/trip.jpg"
-                       alt={act.place_name || "Place image"}
-                       fill
-                       className="object-cover"
-                       sizes="(max-width: 768px) 100vw, 160px"
-                     />
+                    <Image
+                      src="/trip.jpg"
+                      alt={act.place_name || "Place image"}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 160px"
+                    />
                   </div>
 
                   <div className="flex-1 space-y-3">
@@ -318,7 +327,7 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan }> = ({ plan }) => {
               </button>
 
               <button
-                onClick={() => router.refresh()}
+                onClick={() => onNewChat ? onNewChat() : router.refresh()}
                 className="bg-white border-2 border-purple-600 text-purple-700 px-6 sm:px-12 py-3 sm:py-4 rounded-full text-base sm:text-xl"
               >
                 Start New Trip Chat

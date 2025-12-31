@@ -58,6 +58,15 @@ const ChatwithAi = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // ⭐ NEW CHAT RESET FUNCTION
+  const handleNewChat = () => {
+    setChatHistory([]);
+    setCurrentPlan(null); // Clear Zustand store
+    setShowStartScreen(true);
+    setUserInput("");
+    toast.success("Starting a new trip chat!");
+  };
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
@@ -168,11 +177,11 @@ const ChatwithAi = () => {
 
     } catch (error: any) {
       console.error("Chat error:", error);
-      const errorMsg = error.message.includes("Incomplete") 
-        ? "Trip plan incomplete – try a simpler query." 
+      const errorMsg = error.message.includes("Incomplete")
+        ? "Trip plan incomplete – try a simpler query."
         : "Failed to connect. Please try again.";
       toast.error(errorMsg);
-      
+
       setChatHistory(prev => {
         const updated = [...prev];
         updated[updated.length - 1].ai = errorMsg;
@@ -272,7 +281,7 @@ const ChatwithAi = () => {
 
     // Final trip plan — render the full UI using Zustand
     if (ui === "final" && currentPlan) {
-      return <TripPlanRenderer plan={currentPlan} />;
+      return <TripPlanRenderer plan={currentPlan} onNewChat={handleNewChat} />;
     }
 
     // Default: plain markdown
