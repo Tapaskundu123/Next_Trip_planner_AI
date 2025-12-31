@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { generateEmbedding } from "@/lib/embeddings";
+import { getPineconeIndex } from "@/lib/pinecone";
 
 const client = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY!,
@@ -67,6 +69,12 @@ CRITICAL RULES:
   }
 }
 
+CONTEXT FROM TRAVEL GUIDES:
+{{CONTEXT}}
+
+If relevant context is provided above from uploaded travel guides, use this information to enhance your trip recommendations.
+Always prioritize user preferences while incorporating insights from the travel guides.
+
 FINAL INSTRUCTIONS:
 - Do NOT say "Please wait", "One moment", or "Generating..." → frontend handles loading.
 - Always output perfectly valid JSON with no trailing commas or comments.
@@ -77,46 +85,119 @@ export async function POST(req: NextRequest) {
   try {
     const { message, history = [] } = await req.json();
 
-    // Build message array for model
-    const messages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...history.flatMap((entry: { user: string; ai?: string }) => [
-        { role: "user", content: entry.user },
-        ...(entry.ai ? [{ role: "assistant", content: entry.ai }] : []),
-      ]),
-      { role: "user", content: message },
+    // Query Pinecone for relevant context
+    let contextText = "";
+    let hasRelevantContext = false;
+
+    try {
+      const queryEmbedding = await generateEmbedding(message);
+      const index = await getPineconeIndex();
+
+      const searchResults = await index.query({
+        vector: queryEmbedding,
+        topK: 3,
+        includeMetadata: true,
+      });
+
+      // Filter results with good similarity scores (> 0.7)
+      const relevantResults = searchResults.matches.filter(
+        match => match.score && match.score > 0.7
+      );
+
+      if (relevantResults.length > 0) {
+        hasRelevantContext = true;
+        contextText = relevantResults
+          .map((match, idx) => {
+            const filename = match.metadata?.filename || 'Unknown';
+            const text = match.metadata?.text || '';
+            const score = (match.score! * 100).toFixed(1);
+            return `[Source ${idx + 1}: ${filename} (${score}% relevant)]\n${text}`;
+          })
+          .join('\n\n---\n\n');
+      }
+    } catch (error) {
+      console.warn('RAG context retrieval failed, continuing without context:', error);
+    }
+
+    // Check if this is a trip planning query or a general question
+    const tripPlanningKeywords = [
+      'plan', 'trip', 'travel', 'itinerary', 'visit', 'destination',
+      'hotel', 'budget', 'days', 'duration', 'group', 'solo', 'couple', 'family'
     ];
+
+    const lowerMessage = message.toLowerCase();
+    const isTripPlanningQuery = tripPlanningKeywords.some(keyword =>
+      lowerMessage.includes(keyword)
+    ) || history.length > 0; // If there's conversation history, continue trip planning
+
+    let messages;
+
+    if (hasRelevantContext && !isTripPlanningQuery) {
+      // General Q&A Mode: Use RAG context directly with a conversational prompt
+      const generalPrompt = `You are a knowledgeable travel assistant. Answer the user's question using the provided context from travel guides.
+
+CONTEXT FROM TRAVEL GUIDES:
+${contextText}
+
+INSTRUCTIONS:
+- Provide a helpful, conversational response based on the context above
+- If the context is relevant, use it to enhance your answer
+- Be friendly and informative
+- Keep responses concise but comprehensive
+- Always respond with valid JSON in this format: {"resp": "your response text", "ui": "none"}`;
+
+      messages = [
+        { role: "system", content: generalPrompt },
+        { role: "user", content: message },
+      ];
+    } else {
+      // Trip Planning Mode: Use the structured SYSTEM_PROMPT
+      const contextForPrompt = hasRelevantContext
+        ? contextText
+        : "No relevant travel guide information available.";
+
+      const systemPromptWithContext = SYSTEM_PROMPT.replace('{{CONTEXT}}', contextForPrompt);
+
+      messages = [
+        { role: "system", content: systemPromptWithContext },
+        ...history.flatMap((entry: { user: string; ai?: string }) => [
+          { role: "user", content: entry.user },
+          ...(entry.ai ? [{ role: "assistant", content: entry.ai }] : []),
+        ]),
+        { role: "user", content: message },
+      ];
+    }
 
     const completion = await client.chat.completions.create({
       model: "x-ai/grok-4.1-fast",
       messages,
       temperature: 0.2,
       max_tokens: 2500,
-      response_format: { type: "json_object" }, // ← ADD THIS LINE
+      response_format: { type: "json_object" },
     });
 
     const content = completion.choices?.[0]?.message?.content || "{}";
 
     // Clean and parse JSON
     let cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    
+
     try {
       const parsed = JSON.parse(cleaned);
-      
+
       // If trip_plan exists, return it as an object (not stringified)
       if (parsed.trip_plan) {
         return NextResponse.json({
           resp: parsed.resp || "Your trip plan is ready!",
           ui: "final",
-          trip_plan: parsed.trip_plan, // ← Return as object
+          trip_plan: parsed.trip_plan,
         });
       }
-      
+
       // Normal response
       if (parsed && typeof parsed === "object") {
         return NextResponse.json(parsed);
       }
-      
+
       return NextResponse.json({ resp: content, ui: "none" });
     } catch (err) {
       console.error("JSON Parse Error:", err, "\nRaw content:", content);
