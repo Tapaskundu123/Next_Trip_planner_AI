@@ -8,6 +8,7 @@ import remarkGfm from "remark-gfm";
 import ChatboxStart from './ChatboxStart';
 import TripPlanRenderer from './TripPlanRenderer';
 import { useTripStore } from '@/store/useTripStore';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface ChatEntry {
   user: string;
@@ -48,10 +49,13 @@ export interface TripPlan {
 }
 
 const ChatwithAi = () => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [userInput, setUserInput] = useState("");
   const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showStartScreen, setShowStartScreen] = useState(true);
+  const [hasAutoSent, setHasAutoSent] = useState(false);
 
   // ⭐ Use Zustand for global plan state (no local currentPlan needed)
   const { setCurrentPlan } = useTripStore();
@@ -64,12 +68,27 @@ const ChatwithAi = () => {
     setCurrentPlan(null); // Clear Zustand store
     setShowStartScreen(true);
     setUserInput("");
+    setHasAutoSent(false); // Reset auto-send flag
+
+    // Clear URL query params
+    router.replace('/create-new-trip');
+
     toast.success("Starting a new trip chat!");
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatHistory]);
+
+  // ⭐ AUTO-SEND MESSAGE FROM URL PARAMS
+  useEffect(() => {
+    const message = searchParams.get('message');
+    if (message && !hasAutoSent && chatHistory.length === 0) {
+      setHasAutoSent(true);
+      setShowStartScreen(false);
+      sendMessage(undefined, message);
+    }
+  }, [searchParams, hasAutoSent, chatHistory.length]);
 
   const sendMessage = async (e?: React.FormEvent, customMessage?: string) => {
     e?.preventDefault();
