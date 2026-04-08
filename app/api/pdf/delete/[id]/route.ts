@@ -5,12 +5,12 @@ import { connectDB } from '@/lib/mongodb';
 
 export async function DELETE(
     req: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> } // ✅ changed
 ) {
     try {
         await connectDB();
 
-        const documentId = params.id;
+        const { id: documentId } = await context.params; // ✅ await params
 
         if (!documentId) {
             return NextResponse.json(

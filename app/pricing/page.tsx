@@ -5,11 +5,12 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { useEffect, useRef } from 'react'
+import getStripe from '@/lib/stripe-client'
 
 const Page = () => {
   const router = useRouter()
   const hasChecked = useRef(false)
-
+  
   useEffect(() => {
     if (hasChecked.current) return
     hasChecked.current = true
@@ -32,13 +33,25 @@ const Page = () => {
 
   const handlePricing = async (price: number) => {
     try {
+       const stripe = await getStripe();
+
+    if (!stripe) {
+      toast.error("Stripe failed to load");
+      return;
+    }
       const res = await axios.post('/api/price', {
-        pricing: price,
+        amount: price,
       })
 
       if (res.status === 200) {
+
+        const { sessionId } = await res.json();
+
+        const stripe = await getStripe();
+        await stripe.redirectToCheckout({ sessionId });
+
         toast.success("Successfully purchased 🎉")
-        router.replace('/') // ✅ prevent extra mount
+        router.replace('/payment-success') // ✅ prevent extra mount
       }
     } catch (error) {
       toast.error("Something went wrong")

@@ -5,8 +5,11 @@ export interface IUser {
     name: string;
     email: string;
     password: string;
-    price:number;
     _id?: mongoose.Types.ObjectId;
+    isPurchased: boolean;
+    purchasedAmount: number;
+    stripeSessionId: string;
+    purchasedAt: Date;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -24,10 +27,22 @@ const userSchema = new mongoose.Schema<IUser>({
         type: String,
         required: [true, 'Password is required']
     },
-    price:{
+    isPurchased: {
+        type: Boolean,
+        default: false,
+    },
+
+    purchasedAmount: {
         type: Number,
-        default:0
-    }
+    },
+
+    stripeSessionId: {
+        type: String,
+    },
+
+    purchasedAt: {
+        type: Date,
+    },
 }, { timestamps: true });
 
 export const User = mongoose.models?.User || mongoose.model<IUser>('User', userSchema);
