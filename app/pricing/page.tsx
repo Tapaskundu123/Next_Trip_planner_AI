@@ -45,10 +45,11 @@ const Page = () => {
 
       if (res.status === 200) {
 
-        const { sessionId } = await res.json();
+        const { sessionId } = res.data;
 
-        const stripe = await getStripe();
-        await stripe.redirectToCheckout({ sessionId });
+        if (stripe) {
+          await (stripe as any).redirectToCheckout({ sessionId });
+        }
 
         toast.success("Successfully purchased 🎉")
         router.replace('/payment-success') // ✅ prevent extra mount
