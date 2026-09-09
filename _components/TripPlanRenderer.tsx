@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Calendar, Hotel, MapPin, Star, Sun, Edit2, X, Check, Loader2, Download } from "lucide-react";
+import { Calendar, Hotel, MapPin, Star, Sun, Edit2, X, Check, Loader2, Download, Plane, ExternalLink, ShieldCheck } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -328,6 +328,107 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan; onNewChat?: () => void }> = (
         />
       </section>
 
+      {/* ── Booking.com Travel Hub (Flights & Hotels) ── */}
+      <section className="bg-gradient-to-br from-[#003580] via-[#002b66] to-[#001c44] text-white rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden border border-blue-400/20">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10">
+          <div>
+            <div className="inline-flex items-center gap-2 bg-yellow-400/15 border border-yellow-400/30 px-3 py-1 rounded-full text-xs font-bold text-yellow-300 mb-2.5">
+              <span className="font-black text-sm">Booking.com</span> Partner Integration
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold flex items-center gap-2.5">
+              <Plane className="w-7 h-7 text-yellow-400" /> Book Flights & Stays for Your Trip
+            </h2>
+            <p className="text-blue-100 text-sm mt-1">
+              Complete your journey from {p.origin} to {p.destination} with guaranteed best rates.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2 flex-wrap text-xs text-blue-200">
+            <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+              <ShieldCheck className="w-4 h-4 text-green-400" /> Best Price Guarantee
+            </span>
+            <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
+              <ShieldCheck className="w-4 h-4 text-green-400" /> Free Cancellation Options
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
+          {/* Flight Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 sm:p-6 border border-white/15 flex flex-col justify-between hover:bg-white/15 transition shadow-lg">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
+                  <Plane className="w-4 h-4 text-yellow-400" /> Flight Search
+                </span>
+                <span className="text-xs bg-yellow-400/20 text-yellow-300 font-semibold px-2.5 py-1 rounded-full">
+                  {p.group_size} Travelers
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-1">
+                {p.origin} ✈ {p.destination}
+              </h3>
+              <p className="text-xs text-blue-200 mb-4">
+                Travel Date: <strong className="text-white">{p.startDate || "Flexible departure"}</strong> · Duration: {p.duration}
+              </p>
+            </div>
+            <div className="space-y-2 pt-2">
+              <a
+                href={`https://www.booking.com/flights/index.html?from=${encodeURIComponent(p.origin)}&to=${encodeURIComponent(p.destination)}&departDate=${p.startDate || ""}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-yellow-400 hover:bg-yellow-300 text-[#003580] font-extrabold text-sm rounded-xl shadow-md transition transform hover:scale-[1.02]"
+              >
+                Search Flights on Booking.com ↗
+              </a>
+              <a
+                href={`https://www.google.com/travel/flights?q=flights%20from%20${encodeURIComponent(p.origin)}%20to%20${encodeURIComponent(p.destination)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition"
+              >
+                Compare on Google Flights <ExternalLink className="w-3.5 h-3.5 ml-1" />
+              </a>
+            </div>
+          </div>
+
+          {/* Hotels Card */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 sm:p-6 border border-white/15 flex flex-col justify-between hover:bg-white/15 transition shadow-lg">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
+                  <Hotel className="w-4 h-4 text-yellow-400" /> Stays & Accommodations
+                </span>
+                <span className="text-xs bg-emerald-400/20 text-emerald-300 font-semibold px-2.5 py-1 rounded-full">
+                  {p.budget} Budget
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-1">
+                Hotels & Resorts in {p.destination}
+              </h3>
+              <p className="text-xs text-blue-200 mb-4">
+                Explore curated stays matching your {p.budget} budget in {p.destination} with instant confirmation.
+              </p>
+            </div>
+            <div className="space-y-2 pt-2">
+              <a
+                href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(p.destination)}&checkin=${p.startDate || ""}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-white hover:bg-gray-100 text-[#003580] font-extrabold text-sm rounded-xl shadow-md transition transform hover:scale-[1.02]"
+              >
+                Search All Hotels on Booking.com ↗
+              </a>
+              <p className="text-center text-[11px] text-blue-200/90 pt-1">
+                ⭐ Or click &quot;Book on Booking.com&quot; directly on any recommended hotel below
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Hotels ── */}
       <section>
         <div className="flex items-center justify-between mb-5">
@@ -385,9 +486,19 @@ const TripPlanRenderer: React.FC<{ plan: TripPlan; onNewChat?: () => void }> = (
                   </div>
                 </div>
                 <p className="text-xs text-gray-400 mb-3">{hotel.hotel_address}</p>
-                <Button onClick={() => handleMap(hotel.hotel_address)} size="sm" variant="outline" className="w-full">
-                  View on Maps →
-                </Button>
+                <div className="grid grid-cols-2 gap-2 mt-auto pt-1">
+                  <Button onClick={() => handleMap(hotel.hotel_address)} size="sm" variant="outline" className="w-full text-xs">
+                    View on Maps →
+                  </Button>
+                  <a
+                    href={`https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotel.hotel_name + " " + p.destination)}&checkin=${p.startDate || ""}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg text-white bg-[#003580] hover:bg-[#00224f] shadow-sm transition-all hover:scale-[1.02]"
+                  >
+                    <span className="font-black text-yellow-300">B.</span> Book on Booking ↗
+                  </a>
+                </div>
               </div>
             </div>
           ))}

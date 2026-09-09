@@ -3,12 +3,13 @@
 import React, { useState, useCallback, useEffect } from "react";
 import {
   Plane, MapPin, Calendar, Users, DollarSign, Clock,
-  Sparkles, Loader2, ChevronRight, AlertCircle,
+  Sparkles, Loader2, ChevronRight, AlertCircle, ArrowLeft, Compass,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import TripPlanRenderer from "./TripPlanRenderer";
 import { useTripStore } from "@/store/useTripStore";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
 // ─── Types ───────────────────────────────────────────────
 export interface TripPlan {
@@ -213,6 +214,32 @@ const TripWizard = () => {
   if (currentPlan) {
     return (
       <div className="min-h-screen bg-gray-50">
+        {/* Navigation Bar back to Landing Page & Dashboard */}
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm px-4 sm:px-8 py-3">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-gray-700 hover:text-indigo-600 bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-xl transition"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to Home
+              </Link>
+              <button
+                onClick={handleNewTrip}
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-2 rounded-xl transition"
+              >
+                <Sparkles className="w-4 h-4" /> Edit & Plan Another
+              </button>
+            </div>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl transition"
+            >
+              <Compass className="w-4 h-4" /> My Dashboard
+            </Link>
+          </div>
+        </header>
+
         <div className="max-w-6xl mx-auto px-4 py-8">
           <TripPlanRenderer plan={currentPlan} onNewChat={handleNewTrip} />
         </div>
@@ -246,6 +273,34 @@ const TripWizard = () => {
       {isGenerating && <GeneratingOverlay destination={destination} />}
 
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 relative overflow-hidden">
+        {/* ── Top Navigation Bar: Back to Landing Page ── */}
+        <header className="relative z-20 border-b border-white/10 bg-slate-900/60 backdrop-blur-md px-4 sm:px-8 py-3.5">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-white/85 hover:text-white bg-white/10 hover:bg-white/20 border border-white/15 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition shadow-sm group"
+            >
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+              <span>Back to Home</span>
+            </Link>
+
+            <Link href="/" className="flex items-center gap-2 font-bold text-base sm:text-lg text-white">
+              <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-orange-500 to-pink-500 flex items-center justify-center text-white text-sm sm:text-base font-black shadow-md">
+                ✈
+              </span>
+              <span className="tracking-tight hidden xs:inline">AI Trip Planner</span>
+            </Link>
+
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-indigo-200 hover:text-white bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/30 px-3 sm:px-4 py-2 rounded-xl transition shadow-sm"
+            >
+              <Compass className="w-4 h-4 text-indigo-400" />
+              <span>My Trips</span>
+            </Link>
+          </div>
+        </header>
+
         {/* Glow blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-20 left-10 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl" />

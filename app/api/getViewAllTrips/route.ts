@@ -29,20 +29,13 @@ export async function GET(req: NextRequest) {
 
     const id = decoded.id;
 
-    // 3️⃣ Fetch saved trips using email
-    const savedTrips = await Trip.find({ user:id });
-
-    if (!savedTrips || savedTrips.length === 0) {
-      return NextResponse.json(
-        { success: false, message: "No trips found" },
-        { status: 404 }
-      );
-    }
+    // 3️⃣ Fetch saved trips using user id sorted by latest
+    const savedTrips = await Trip.find({ user: id }).sort({ createdAt: -1 });
 
     // 4️⃣ Send response
     return NextResponse.json({
       success: true,
-      trips: savedTrips,
+      trips: savedTrips || [],
     });
   } catch (error: any) {
     return NextResponse.json(
