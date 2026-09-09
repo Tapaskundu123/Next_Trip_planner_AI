@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { generateEmbedding } from "@/lib/embeddings";
 import { getPineconeIndex } from "@/lib/pinecone";
@@ -8,17 +8,34 @@ const client = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
 });
 
+function getCurrentDateContext(): string {
+  const now = new Date();
+  const formatted = now.toLocaleDateString("en-IN", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const month = now.getMonth();
+  let season = "winter";
+  if (month >= 2 && month <= 4) season = "spring";
+  else if (month >= 5 && month <= 7) season = "summer";
+  else if (month >= 8 && month <= 10) season = "autumn/fall";
+
+  return `Current date: ${formatted}\nCurrent season (Northern Hemisphere): ${season}`;
+}
+
 const SYSTEM_PROMPT = `
-You are a Trip Planner AI.
+You are a Trip Planner AI — an expert, friendly travel assistant.
 
 Your job is to collect trip details by asking EXACTLY ONE question at a time,
 in this strict order:
 
 1. Starting location (origin)
 2. Destination
-3. Group size (Solo, Couple, Family, Friends)
-4. Budget level (Low, Medium, High)
-5. Trip duration (e.g. 5 days, 7–10 days, 2 weeks)
+3. Travel dates (ask for approximate start date and duration, e.g. "I plan to go in March for 7 days")
+4. Group size (Solo, Couple, Family, Friends)
+5. Budget level (Low, Medium, High)
 
 ========================
 RESPONSE FORMAT RULES
@@ -30,18 +47,18 @@ RESPONSE FORMAT RULES
 For questions or confirmations:
 {
   "resp": "string",
-  "ui": "none | groupSize | budget | tripDuration"
+  "ui": "none | groupSize | budget | datePicker"
 }
 
 When asking:
+- Travel dates → ui = "datePicker"
 - Group size → ui = "groupSize"
 - Budget → ui = "budget"
-- Duration → ui = "tripDuration"
 
 ========================
 EDGE CASE HANDLING (IMPORTANT)
 ========================
-During the 5-question flow (origin → destination → group → budget → duration):
+During the planning flow:
 
 If the user asks ANY question that does NOT answer the current required question:
 
@@ -49,33 +66,17 @@ If the user asks ANY question that does NOT answer the current required question
 
 2. If the CONTEXT contains relevant information:
    - Answer using ONLY the CONTEXT
-   - Do NOT add assumptions or unrelated facts
    - Keep the response concise and travel-focused
 
-3. If the CONTEXT is not relevant OR the place is not covered:
+3. If the CONTEXT is not relevant:
    - Answer using general travel knowledge
-   - Ensure the answer is:
-     - Reasonable
-     - Commonly accepted
-     - Non-speculative
-     - Helpful for travelers
 
-4. If CONTEXT is empty or fully irrelevant:
-   Respond with:
-   {
-     "resp": "I’m a travel planning assistant. I can help plan trips and answer travel questions. What would you like to know about your adventure?",
-     "ui": "none"
-   }
-
-5. After answering:
+4. After answering:
    - Gently return to the SAME pending planning question
    - Do NOT skip, reorder, or auto-fill steps
 
-6. NEVER mention:
-   - Pinecone
-   - Vector search
-   - Context retrieval
-   - Internal logic
+5. NEVER mention:
+   - Pinecone, Vector search, Context retrieval, Internal logic
 
 ========================
 NORMAL FLOW
@@ -87,7 +88,7 @@ If the user provides a valid answer to the current planning question:
 ========================
 FINAL STEP — TRIP PLAN GENERATION
 ========================
-IMMEDIATELY after receiving the 5th answer (trip duration),
+IMMEDIATELY after receiving the 5th answer (budget level),
 generate the COMPLETE trip plan in ONE response using EXACTLY this structure:
 
 {
@@ -96,9 +97,11 @@ generate the COMPLETE trip plan in ONE response using EXACTLY this structure:
   "trip_plan": {
     "destination": "string",
     "duration": "string",
+    "startDate": "string (e.g. March 15, 2026)",
     "origin": "string",
     "budget": "string",
     "group_size": "string",
+    "weather_note": "Brief seasonal weather note for the destination during travel dates",
     "hotels": [
       {
         "hotel_name": "string",
@@ -142,15 +145,15 @@ Always prioritize user preferences.
 FINAL CONSTRAINTS
 ========================
 - Do NOT include image URLs
-- Do NOT say “Please wait”, “Generating…”, etc.
+- Do NOT say "Please wait", "Generating…", etc.
 - Output must be perfectly valid JSON
 - No trailing commas
-- Current date: December 2025
+- {{DATE_CONTEXT}}
 `;
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, history = [] } = await req.json();
+    const { message, history = [], startDate } = await req.json();
 
     // Query Pinecone for relevant context
     let contextText = "";
@@ -166,41 +169,40 @@ export async function POST(req: NextRequest) {
         includeMetadata: true,
       });
 
-      // Filter results with good similarity scores (> 0.7)
       const relevantResults = searchResults.matches.filter(
-        match => match.score && match.score > 0.7
+        (match) => match.score && match.score > 0.7
       );
 
       if (relevantResults.length > 0) {
         hasRelevantContext = true;
         contextText = relevantResults
           .map((match, idx) => {
-            const filename = match.metadata?.filename || 'Unknown';
-            const text = match.metadata?.text || '';
+            const filename = match.metadata?.filename || "Unknown";
+            const text = match.metadata?.text || "";
             const score = (match.score! * 100).toFixed(1);
             return `[Source ${idx + 1}: ${filename} (${score}% relevant)]\n${text}`;
           })
-          .join('\n\n---\n\n');
+          .join("\n\n---\n\n");
       }
     } catch (error) {
-      console.warn('RAG context retrieval failed, continuing without context:', error);
+      console.warn("RAG context retrieval failed, continuing without context:", error);
     }
 
-    // Check if this is a trip planning query or a general question
     const tripPlanningKeywords = [
-      'plan', 'trip', 'travel', 'itinerary', 'visit', 'destination',
-      'hotel', 'budget', 'days', 'duration', 'group', 'solo', 'couple', 'family'
+      "plan", "trip", "travel", "itinerary", "visit", "destination",
+      "hotel", "budget", "days", "duration", "group", "solo", "couple", "family",
     ];
 
     const lowerMessage = message.toLowerCase();
-    const isTripPlanningQuery = tripPlanningKeywords.some(keyword =>
-      lowerMessage.includes(keyword)
-    ) || history.length > 0; // If there's conversation history, continue trip planning
+    const isTripPlanningQuery =
+      tripPlanningKeywords.some((keyword) => lowerMessage.includes(keyword)) ||
+      history.length > 0;
+
+    const dateContext = getCurrentDateContext();
 
     let messages;
 
     if (hasRelevantContext && !isTripPlanningQuery) {
-      // General Q&A Mode: Use RAG context directly with a conversational prompt
       const generalPrompt = `You are a knowledgeable travel assistant. Answer the user's question using the provided context from travel guides.
 
 CONTEXT FROM TRAVEL GUIDES:
@@ -208,7 +210,6 @@ ${contextText}
 
 INSTRUCTIONS:
 - Provide a helpful, conversational response based on the context above
-- If the context is relevant, use it to enhance your answer
 - Be friendly and informative
 - Keep responses concise but comprehensive
 - Always respond with valid JSON in this format: {"resp": "your response text", "ui": "none"}`;
@@ -218,12 +219,17 @@ INSTRUCTIONS:
         { role: "user", content: message },
       ];
     } else {
-      // Trip Planning Mode: Use the structured SYSTEM_PROMPT
       const contextForPrompt = hasRelevantContext
         ? contextText
         : "No relevant travel guide information available.";
 
-      const systemPromptWithContext = SYSTEM_PROMPT.replace('{{CONTEXT}}', contextForPrompt);
+      const systemPromptWithContext = SYSTEM_PROMPT
+        .replace("{{CONTEXT}}", contextForPrompt)
+        .replace("{{DATE_CONTEXT}}", dateContext);
+
+      const startDateNote = startDate
+        ? `\n[User's planned start date: ${startDate}]`
+        : "";
 
       messages = [
         { role: "system", content: systemPromptWithContext },
@@ -231,65 +237,91 @@ INSTRUCTIONS:
           { role: "user", content: entry.user },
           ...(entry.ai ? [{ role: "assistant", content: entry.ai }] : []),
         ]),
-        { role: "user", content: message },
+        { role: "user", content: message + startDateNote },
       ];
     }
 
-    const completion = await client.chat.completions.create({
-      model: "x-ai/grok-4.1-fast",
-      messages,
+    // =============================================
+    // STREAMING RESPONSE using SSE
+    // =============================================
+    const stream = await client.chat.completions.create({
+      model: "x-ai/grok-4-1-mini",
+      messages: messages as any,
       temperature: 0.2,
-      max_tokens: 4000, // Increased to handle full trip plans
-      response_format: { type: "json_object" },
+      max_tokens: 6000,
+      stream: true,
     });
 
-    const content = completion.choices?.[0]?.message?.content || "{}";
+    const encoder = new TextEncoder();
+    let fullContent = "";
 
-    // Clean and parse JSON
-    let cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const delta = chunk.choices?.[0]?.delta?.content || "";
+            if (delta) {
+              fullContent += delta;
+              // Send each token chunk as SSE
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ token: delta })}\n\n`)
+              );
+            }
 
-    try {
-      const parsed = JSON.parse(cleaned);
+            // Check if stream is done
+            if (chunk.choices?.[0]?.finish_reason === "stop" || chunk.choices?.[0]?.finish_reason === "length") {
+              // Parse and send the final structured data
+              try {
+                const cleaned = fullContent
+                  .replace(/```json\n?/g, "")
+                  .replace(/```\n?/g, "")
+                  .trim();
+                const parsed = JSON.parse(cleaned);
 
-      // If trip_plan exists, return it as an object (not stringified)
-      if (parsed.trip_plan) {
-        return NextResponse.json({
-          resp: parsed.resp || "Your trip plan is ready!",
-          ui: "final",
-          trip_plan: parsed.trip_plan,
-        });
-      }
+                // Send final structured event
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({ type: "done", data: parsed })}\n\n`
+                  )
+                );
+              } catch (parseErr) {
+                // If JSON parse fails, send raw content
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({
+                      type: "done",
+                      data: { resp: fullContent, ui: "none" },
+                    })}\n\n`
+                  )
+                );
+              }
+              controller.close();
+            }
+          }
+        } catch (err) {
+          console.error("Streaming error:", err);
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ type: "error", message: "Stream failed" })}\n\n`
+            )
+          );
+          controller.close();
+        }
+      },
+    });
 
-      // Normal response
-      if (parsed && typeof parsed === "object") {
-        return NextResponse.json(parsed);
-      }
-
-      return NextResponse.json({ resp: content, ui: "none" });
-    } catch (err) {
-      console.error("JSON Parse Error:", err, "\nRaw content:", content);
-
-      // Check if response was truncated
-      if (completion.choices?.[0]?.finish_reason === 'length') {
-        return NextResponse.json({
-          resp: "The trip plan is too detailed. Please try asking for a shorter duration or I'll create a more concise plan.",
-          ui: "none",
-          error: "Response truncated - token limit reached"
-        });
-      }
-
-      // Return the raw content if JSON parsing fails
-      return NextResponse.json({
-        resp: "I encountered an error generating the response. Please try again.",
-        ui: "none",
-        error: "JSON parse error"
-      });
-    }
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
   } catch (error: any) {
     console.error("OpenRouter Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to generate response" },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: error.message || "Failed to generate response" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

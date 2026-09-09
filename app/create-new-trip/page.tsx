@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import ChatwithAi from "@/_components/ChatwithAi";
 import ShowingPlaceInMap from "@/_components/ShowingPlaceInMap";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function TripPlanningPage() {
@@ -22,7 +22,14 @@ export default function TripPlanningPage() {
             md:w-1/2 md:border-r md:border-gray-200
           `}
         >
-          <ChatwithAi />
+          <Suspense fallback={
+            <div className="flex h-full items-center justify-center text-gray-500">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mr-2" />
+              <span>Loading AI Trip Planner...</span>
+            </div>
+          }>
+            <ChatwithAi />
+          </Suspense>
         </section>
 
         {/* === MAP SECTION === */}

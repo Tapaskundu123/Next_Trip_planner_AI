@@ -14,7 +14,7 @@ export default function PaymentSuccessPage() {
 
     useEffect(() => {
         const checkIsPurchased= async () => {
-            const res= await axios.get('api/checkIsPurchased');
+            const res= await axios.get('/api/checkIsPurchased');
             const {isPurchased}= res.data;
             if(!isPurchased){
                 toast.error("payment filed or doesn't found");

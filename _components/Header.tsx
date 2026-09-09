@@ -10,6 +10,7 @@ import { useState } from 'react'
 
 const menuItems = [
   { name: 'Home', link: '/' },
+  { name: 'Features', link: '/#features' },
   { name: 'Pricing', link: '/pricing' },
   { name: 'Contact us', link: '/contact-us' },
 ]
