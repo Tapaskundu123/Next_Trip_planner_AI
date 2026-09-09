@@ -22,7 +22,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    const isPurchased = user.price === 499;
+    const isPurchased = Boolean(
+      user.isPurchased === true ||
+      user.purchasedAmount === 499 ||
+      user.price === 499
+    );
 
     return NextResponse.json(
       { success: true, isPurchased },

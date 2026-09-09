@@ -11,6 +11,7 @@ export function proxy(request: NextRequest) {
     path === '/signup' ||
     path === '/pricing' ||
     path === '/contact-us' ||
+    path === '/dashboard' ||
     path === '/create-new-trip';
 
   const token = request.cookies.get('token')?.value;
@@ -34,6 +35,7 @@ export const config = {
     '/login',
     '/signup',
     '/create-new-trip',
+    '/dashboard',
     '/my-trips',
     '/payment-success',
     '/pricing',

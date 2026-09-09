@@ -7,9 +7,13 @@ export interface IUser {
     password: string;
     _id?: mongoose.Types.ObjectId;
     isPurchased: boolean;
-    purchasedAmount: number;
-    stripeSessionId: string;
-    purchasedAt: Date;
+    purchasedAmount?: number;
+    price?: number;
+    paymentGateway?: string;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+    stripeSessionId?: string;
+    purchasedAt?: Date;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -34,6 +38,19 @@ const userSchema = new mongoose.Schema<IUser>({
 
     purchasedAmount: {
         type: Number,
+    },
+
+    paymentGateway: {
+        type: String,
+        default: "razorpay",
+    },
+
+    razorpayOrderId: {
+        type: String,
+    },
+
+    razorpayPaymentId: {
+        type: String,
     },
 
     stripeSessionId: {
