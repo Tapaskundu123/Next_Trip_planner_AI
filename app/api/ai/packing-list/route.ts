@@ -69,7 +69,7 @@ Rules:
 - Consider the budget level (${budget}) for recommendations`;
 
     const completion = await client.chat.completions.create({
-      model: "x-ai/grok-4-1-mini",
+      model: "x-ai/grok-4.3",
       messages: [
         { role: "system", content: "You are a travel packing expert. Always return valid JSON only." },
         { role: "user", content: prompt },

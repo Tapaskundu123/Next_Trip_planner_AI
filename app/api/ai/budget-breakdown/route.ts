@@ -53,7 +53,7 @@ Rules:
 - Numbers must be integers, not strings`;
 
     const completion = await client.chat.completions.create({
-      model: "x-ai/grok-4-1-mini",
+      model: "x-ai/grok-4.3",
       messages: [
         { role: "system", content: "You are a travel finance expert. Always return valid JSON only with realistic cost estimates." },
         { role: "user", content: prompt },

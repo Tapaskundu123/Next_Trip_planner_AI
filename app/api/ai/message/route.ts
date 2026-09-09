@@ -245,7 +245,7 @@ INSTRUCTIONS:
     // STREAMING RESPONSE using SSE
     // =============================================
     const stream = await client.chat.completions.create({
-      model: "x-ai/grok-4-1-mini",
+      model: "x-ai/grok-4.3",
       messages: messages as any,
       temperature: 0.2,
       max_tokens: 6000,

@@ -85,7 +85,7 @@ Response format:
     }
 
     const completion = await client.chat.completions.create({
-      model: "x-ai/grok-4-1-mini",
+      model: "x-ai/grok-4.3",
       messages: [
         { role: "system", content: sectionContext },
         { role: "user", content: `Apply the edit: "${editRequest}"` },

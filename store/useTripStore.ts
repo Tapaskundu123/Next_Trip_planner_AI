@@ -1,6 +1,6 @@
 // store/useTripStore.ts
 import { create } from 'zustand';
-import { TripPlan } from '@/_components/ChatwithAi'; // Adjust path if needed
+import { TripPlan } from '@/_components/TripWizard'; // TripPlan now defined in TripWizard
 
 interface TripStore {
   currentPlan: TripPlan | null;
